@@ -35,7 +35,8 @@ android {
 
     signingConfigs {
         create("samiUniversal") {
-            val keystoreFile = file("sami-signing-key.p12")
+            val keyPath = file("${project.projectDir}/sami-signing-key.p12")
+            val keystoreFile = if (keyPath.exists()) keyPath else file("sami-signing-key.p12")
             if (keystoreFile.exists()) {
                 storeFile = keystoreFile
                 storeType = "PKCS12"
@@ -45,14 +46,14 @@ android {
                 enableV1Signing = true
                 enableV2Signing = true
                 enableV3Signing = true
-                enableV4Signing = true
             }
         }
     }
 
     buildTypes {
         debug {
-            val keystoreFile = file("sami-signing-key.p12")
+            val keyPath = file("${project.projectDir}/sami-signing-key.p12")
+            val keystoreFile = if (keyPath.exists()) keyPath else file("sami-signing-key.p12")
             if (keystoreFile.exists()) {
                 signingConfig = signingConfigs.getByName("samiUniversal")
             }
@@ -60,7 +61,8 @@ android {
         release {
             isMinifyEnabled = false
             isShrinkResources = false
-            val keystoreFile = file("sami-signing-key.p12")
+            val keyPath = file("${project.projectDir}/sami-signing-key.p12")
+            val keystoreFile = if (keyPath.exists()) keyPath else file("sami-signing-key.p12")
             if (keystoreFile.exists()) {
                 signingConfig = signingConfigs.getByName("samiUniversal")
             } else {

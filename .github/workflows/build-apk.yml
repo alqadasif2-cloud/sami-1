@@ -53,15 +53,13 @@ jobs:
 
       - name: Build Android APK
         run: |
-          chmod +x ./gradlew || true
-          echo "Building Android APKs (Release & Debug)..."
-          if [ -f ./gradlew ]; then
-            ./gradlew :app:assembleRelease :app:assembleDebug --stacktrace || ./gradlew :app:assembleDebug --stacktrace
-          else
-            gradle :app:assembleRelease :app:assembleDebug --stacktrace || gradle :app:assembleDebug --stacktrace
-          fi
-          echo "Build finished. Generated APK files:"
-          find app/build/outputs/apk/ -name "*.apk" -ls || true
+          chmod +x ./gradlew
+          echo "=== 1. Building Debug APK ==="
+          ./gradlew :app:assembleDebug --stacktrace
+          echo "=== 2. Building Release APK ==="
+          ./gradlew :app:assembleRelease --stacktrace || echo "Release build encountered an issue, Debug APK will be packaged"
+          echo "=== 3. Listing Generated APK Files ==="
+          find app/build/outputs/apk/ -type f -name "*.apk"
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
