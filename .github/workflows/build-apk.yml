@@ -1,0 +1,91 @@
+name: Build Sami App (Web & Android APK)
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'نوع البناء (release أو debug)'
+        required: true
+        default: 'release'
+        type: choice
+        options:
+          - release
+          - debug
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Web & Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Node Dependencies
+        run: npm install
+
+      - name: Build Web Application
+        run: npm run build
+
+      - name: Sync Web Distribution to Android Assets
+        run: |
+          mkdir -p app/src/main/assets/assets
+          cp -r dist/* app/src/main/assets/ || true
+          cp -r public/* app/src/main/assets/ || true
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 17
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: 8.6
+
+      - name: Generate Gradle Wrapper if Missing
+        run: |
+          if [ ! -f ./gradlew ]; then
+            gradle wrapper --gradle-version 8.6
+          fi
+          chmod +x ./gradlew
+
+      - name: Build Android Release APK
+        if: "${{ github.event.inputs.build_type != 'debug' }}"
+        run: ./gradlew :app:assembleRelease --stacktrace
+
+      - name: Build Android Debug APK
+        if: "${{ github.event.inputs.build_type == 'debug' || failure() }}"
+        run: ./gradlew :app:assembleDebug --stacktrace
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Sami-Trading-Tracker-APK
+          path: |
+            app/build/outputs/apk/**/*.apk
+          retention-days: 30
+
+      - name: Summary
+        run: |
+          echo "### 🚀 اكتمل بناء تطبيق Sami بنجاح!" >> $GITHUB_STEP_SUMMARY
+          echo "- **ملفات APK**: متاحة للتنزيل من قسم Artifacts أعلى صفحة Action." >> $GITHUB_STEP_SUMMARY
+          echo "- **تحديث الويب**: تم دمج آخر كود HTML/JS/CSS داخل حزمة التطبيق." >> $GITHUB_STEP_SUMMARY
