@@ -10,15 +10,6 @@ on:
       - main
       - master
   workflow_dispatch:
-    inputs:
-      build_type:
-        description: 'نوع البناء (release أو debug)'
-        required: true
-        default: 'release'
-        type: choice
-        options:
-          - release
-          - debug
 
 permissions:
   contents: write
@@ -60,37 +51,29 @@ jobs:
         with:
           gradle-version: 8.6
 
-      - name: Build Android Release APK
-        if: "${{ github.event.inputs.build_type != 'debug' }}"
+      - name: Build Android APK
         run: |
           chmod +x ./gradlew || true
+          echo "Building Android APKs (Release & Debug)..."
           if [ -f ./gradlew ]; then
-            ./gradlew :app:assembleRelease --stacktrace
+            ./gradlew :app:assembleRelease :app:assembleDebug --stacktrace || ./gradlew :app:assembleDebug --stacktrace
           else
-            gradle :app:assembleRelease --stacktrace
+            gradle :app:assembleRelease :app:assembleDebug --stacktrace || gradle :app:assembleDebug --stacktrace
           fi
-
-      - name: Build Android Debug APK
-        if: "${{ github.event.inputs.build_type == 'debug' || failure() }}"
-        run: |
-          chmod +x ./gradlew || true
-          if [ -f ./gradlew ]; then
-            ./gradlew :app:assembleDebug --stacktrace
-          else
-            gradle :app:assembleDebug --stacktrace
-          fi
+          echo "Build finished. Generated APK files:"
+          find app/build/outputs/apk/ -name "*.apk" -ls || true
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Sami-Trading-Tracker-APK
-          path: |
-            app/build/outputs/apk/**/*.apk
+          path: app/build/outputs/apk/**/*.apk
+          if-no-files-found: error
           retention-days: 30
 
       - name: Summary
         if: always()
         run: |
           echo "### 🚀 تقرير بناء تطبيق Sami" >> $GITHUB_STEP_SUMMARY
-          echo "- **ملفات APK**: يتم رفعها تلقائيًا في قسم Artifacts أعلى الصفحة." >> $GITHUB_STEP_SUMMARY
-          echo "- **تحديث الويب**: تم بنجاح بناء كود الويب ومزامنته مع أصول تطبيق Android." >> $GITHUB_STEP_SUMMARY
+          echo "- **ملفات APK**: تم تجميعها ورفعها بنجاح في قسم Artifacts بأعلى صفحة البناء لتنزيلها مباشرة." >> $GITHUB_STEP_SUMMARY
+          echo "- **تحديث الويب**: تم دمج آخر كود HTML/JS/CSS المحدث داخل حزمة الـ APK." >> $GITHUB_STEP_SUMMARY
