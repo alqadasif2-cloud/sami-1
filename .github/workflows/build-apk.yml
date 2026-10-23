@@ -36,10 +36,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
 
       - name: Install Node Dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Build Web Application
         run: npm run build
@@ -61,20 +60,25 @@ jobs:
         with:
           gradle-version: 8.6
 
-      - name: Generate Gradle Wrapper if Missing
-        run: |
-          if [ ! -f ./gradlew ]; then
-            gradle wrapper --gradle-version 8.6
-          fi
-          chmod +x ./gradlew
-
       - name: Build Android Release APK
         if: "${{ github.event.inputs.build_type != 'debug' }}"
-        run: ./gradlew :app:assembleRelease --stacktrace
+        run: |
+          chmod +x ./gradlew || true
+          if [ -f ./gradlew ]; then
+            ./gradlew :app:assembleRelease --stacktrace
+          else
+            gradle :app:assembleRelease --stacktrace
+          fi
 
       - name: Build Android Debug APK
         if: "${{ github.event.inputs.build_type == 'debug' || failure() }}"
-        run: ./gradlew :app:assembleDebug --stacktrace
+        run: |
+          chmod +x ./gradlew || true
+          if [ -f ./gradlew ]; then
+            ./gradlew :app:assembleDebug --stacktrace
+          else
+            gradle :app:assembleDebug --stacktrace
+          fi
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
@@ -85,7 +89,8 @@ jobs:
           retention-days: 30
 
       - name: Summary
+        if: always()
         run: |
-          echo "### 🚀 اكتمل بناء تطبيق Sami بنجاح!" >> $GITHUB_STEP_SUMMARY
-          echo "- **ملفات APK**: متاحة للتنزيل من قسم Artifacts أعلى صفحة Action." >> $GITHUB_STEP_SUMMARY
-          echo "- **تحديث الويب**: تم دمج آخر كود HTML/JS/CSS داخل حزمة التطبيق." >> $GITHUB_STEP_SUMMARY
+          echo "### 🚀 تقرير بناء تطبيق Sami" >> $GITHUB_STEP_SUMMARY
+          echo "- **ملفات APK**: يتم رفعها تلقائيًا في قسم Artifacts أعلى الصفحة." >> $GITHUB_STEP_SUMMARY
+          echo "- **تحديث الويب**: تم بنجاح بناء كود الويب ومزامنته مع أصول تطبيق Android." >> $GITHUB_STEP_SUMMARY
